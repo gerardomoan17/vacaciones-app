@@ -1,38 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Mis Vacaciones</title>
+import { useState, useMemo } from "react";
 
-  <!-- PWA -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Vacaciones" />
-  <meta name="theme-color" content="#4c1d95" />
-  <link rel="apple-touch-icon" href="icon.png" />
-  <link rel="manifest" href="manifest.json" />
-
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f5f3ff; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; }
-    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-    .fade-up { animation: fadeUp .25s ease-out; }
-  </style>
-</head>
-<body>
-<div id="root"></div>
-
-<script type="text/babel">
-const { useState, useMemo, useEffect } = React;
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const easterDate = y => {
+const easterDate = (y) => {
   const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,
     f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
     h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,
@@ -40,7 +8,7 @@ const easterDate = y => {
   return new Date(y,Math.floor((h+l-7*m+114)/31)-1,((h+l-7*m+114)%31)+1);
 };
 
-const holidayName = date => {
+const holidayName = (date) => {
   const y=date.getFullYear(),mo=date.getMonth(),d=date.getDate(),dw=date.getDay();
   if(mo===0&&d===1) return "Año Nuevo";
   if(mo===4&&d===1) return "Día del Trabajo";
@@ -79,21 +47,18 @@ const bizDays = (s, e, customs=[]) => {
   return n;
 };
 
-const fmtDate = str => str ? new Date(str+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '-';
-const fmtDateFull = str => str ? new Date(str+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '-';
-const todayStr = () => new Date().toISOString().split('T')[0];
+const fmtDate = (str) => str ? new Date(str+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '-';
+const fmtDateFull = (str) => str ? new Date(str+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+const today = () => new Date().toISOString().split('T')[0];
 const MO = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const ICONS = ["🌴","🏖️","🗻","🏙️","✈️"];
-const purple = "#7c3aed", purpleLight = "#ede9fe";
 
-// ── Componentes ───────────────────────────────────────────────────────────────
 const HolidayTags = ({start, end, customs}) => {
   const hs = holidaysInPeriod(start, end, customs);
   if(!hs.length) return null;
   return (
     <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:8}}>
       {hs.map(h => (
-        <span key={h} style={{background:"rgba(251,191,36,.15)",border:"1px solid rgba(251,191,36,.4)",color:"#92400e",borderRadius:20,padding:"2px 9px",fontSize:10,fontWeight:600}}>
+        <span key={h} style={{background:"rgba(251,191,36,.15)",border:"1px solid rgba(251,191,36,.4)",color:"#92400e",borderRadius:20,padding:"2px 9px",fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
           🎁 {h}
         </span>
       ))}
@@ -108,27 +73,14 @@ const Field = ({label, children}) => (
   </div>
 );
 
-const iSx = {padding:"11px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:13,outline:"none",width:"100%",background:"#f8fafc",color:"#1e293b"};
+const inputSx = {padding:"11px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box",background:"#f8fafc",color:"#1e293b",transition:"border .15s"};
 
-// ── App ───────────────────────────────────────────────────────────────────────
-function App() {
+export default function App() {
   const [tab, setTab] = useState("dashboard");
-
-  const [cfg, setCfg] = useState(() => {
-    try { const s=localStorage.getItem('vac_cfg'); return s?JSON.parse(s):{baseDate:'2025-12-04',baseBalance:9,anniversaryDate:'2026-02-01',oldRate:22,newRate:24}; } catch{ return {baseDate:'2025-12-04',baseBalance:9,anniversaryDate:'2026-02-01',oldRate:22,newRate:24}; }
-  });
-  const [vacations, setVacations] = useState(() => {
-    try { const s=localStorage.getItem('vac_list'); return s?JSON.parse(s):[]; } catch{ return []; }
-  });
-  const [customs, setCustoms] = useState(() => {
-    try { const s=localStorage.getItem('vac_customs'); return s?JSON.parse(s):[]; } catch{ return []; }
-  });
-
-  useEffect(() => { try{ localStorage.setItem('vac_cfg', JSON.stringify(cfg)); }catch{} }, [cfg]);
-  useEffect(() => { try{ localStorage.setItem('vac_list', JSON.stringify(vacations)); }catch{} }, [vacations]);
-  useEffect(() => { try{ localStorage.setItem('vac_customs', JSON.stringify(customs)); }catch{} }, [customs]);
-
-  const [targetDate, setTargetDate] = useState(todayStr);
+  const [cfg, setCfg] = useState({baseDate:'2025-12-04',baseBalance:9,anniversaryDate:'2026-02-01',oldRate:22,newRate:24});
+  const [vacations, setVacations] = useState([]);
+  const [customs, setCustoms] = useState([]);
+  const [targetDate, setTargetDate] = useState(today);
   const [showBuckets, setShowBuckets] = useState(false);
   const [form, setForm] = useState({description:'',date:'',endDate:'',days:1});
   const [cForm, setCForm] = useState({startDate:'',endDate:'',description:''});
@@ -137,8 +89,8 @@ function App() {
 
   const handleDate = (field, val) => setForm(p => { const u={...p,[field]:val}; if(u.date&&u.endDate){const n=bizDays(u.date,u.endDate,customs);u.days=n>0?n:0;} return u; });
   const addVacation = () => { if(!form.date||!form.endDate||form.days<=0) return; setVacations(p=>[...p,{...form,id:Date.now()}].sort((a,b)=>a.date<b.date?-1:1)); setForm({description:'',date:'',endDate:'',days:1}); };
-  const delVacation = id => setVacations(p=>p.filter(v=>v.id!==id));
-  const startEdit = v => { setEditId(v.id); setEditForm({...v}); };
+  const delVacation = (id) => setVacations(p=>p.filter(v=>v.id!==id));
+  const startEdit = (v) => { setEditId(v.id); setEditForm({...v}); };
   const saveEdit = () => { if(!editForm.date||!editForm.endDate||editForm.days<=0) return; setVacations(p=>p.map(v=>v.id===editId?editForm:v).sort((a,b)=>a.date<b.date?-1:1)); setEditId(null); };
   const handleEditDate = (f, v) => setEditForm(p => { const u={...p,[f]:v}; if(u.date&&u.endDate){const n=bizDays(u.date,u.endDate,customs);u.days=n>0?n:0;} return u; });
   const addCustom = () => { if(!cForm.startDate||!cForm.description) return; const endDate=cForm.endDate||cForm.startDate; setCustoms(p=>[...p,{...cForm,endDate,id:Date.now()}].sort((a,b)=>a.startDate<b.startDate?-1:1)); setCForm({startDate:'',endDate:'',description:''}); };
@@ -163,29 +115,38 @@ function App() {
 
   const tabs=[{id:"dashboard",icon:"📊",label:"Saldo"},{id:"history",icon:"✈️",label:"Historial"},{id:"settings",icon:"⚙️",label:"Config"}];
 
-  return (
-    <div style={{background:"#f5f3ff",minHeight:"100vh",paddingBottom:88}}>
+  // ── COLORES ──
+  const purple = "#7c3aed";
+  const purpleLight = "#ede9fe";
 
-      {/* Header */}
-      <div style={{background:"linear-gradient(160deg,#4c1d95 0%,#7c3aed 60%,#a78bfa 100%)",padding:"52px 20px 28px",color:"white",position:"relative",overflow:"hidden"}}>
+  return (
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif",background:"#f5f3ff",minHeight:"100vh",paddingBottom:88}}>
+
+      {/* ── HEADER ── */}
+      <div style={{background:"linear-gradient(160deg,#4c1d95 0%,#7c3aed 60%,#a78bfa 100%)",padding:"24px 20px 28px",color:"white",position:"relative",overflow:"hidden"}}>
+        {/* decorative circles */}
         <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"rgba(255,255,255,.06)"}} />
         <div style={{position:"absolute",top:10,right:40,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}} />
-        <div style={{maxWidth:480,margin:"0 auto",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div>
-            <p style={{margin:"0 0 2px",fontSize:11,opacity:.6,letterSpacing:1,textTransform:"uppercase",fontWeight:600}}>Bienvenido</p>
-            <h1 style={{margin:0,fontSize:22,fontWeight:800,letterSpacing:-.3}}>🏖️ Mis Vacaciones</h1>
-          </div>
-          <div style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:600,border:"1px solid rgba(255,255,255,.2)"}}>
-            {new Date(targetDate+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}
+        <div style={{maxWidth:480,margin:"0 auto",position:"relative"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div>
+              <p style={{margin:"0 0 2px",fontSize:11,opacity:.6,letterSpacing:1,textTransform:"uppercase",fontWeight:600}}>Bienvenido</p>
+              <h1 style={{margin:0,fontSize:22,fontWeight:800,letterSpacing:-.3}}>🏖️ Mis Vacaciones</h1>
+            </div>
+            <div style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:600,border:"1px solid rgba(255,255,255,.2)"}}>
+              {new Date(targetDate+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}
+            </div>
           </div>
         </div>
       </div>
 
       <div style={{maxWidth:480,margin:"0 auto",padding:"0 14px"}}>
 
-        {/* DASHBOARD */}
+        {/* ── DASHBOARD ── */}
         {tab==="dashboard" && (
-          <div style={{display:"flex",flexDirection:"column",gap:14}} className="fade-up">
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+            {/* Big balance card — floats over header */}
             <div style={{marginTop:-24,background:"white",borderRadius:24,padding:22,boxShadow:"0 8px 32px rgba(124,58,237,.18)",border:"1px solid rgba(124,58,237,.1)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                 <div>
@@ -198,8 +159,10 @@ function App() {
                   <p style={{margin:"2px 0 0",fontSize:11,color:"#94a3b8"}}>días</p>
                 </div>
               </div>
+              {/* mini progress bar */}
               <div style={{background:"#f1f5f9",borderRadius:99,height:6,overflow:"hidden"}}>
-                <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,#7c3aed,#a78bfa)",width:`${Math.min(100,(calc.taken/(calc.taken+calc.available||1))*100)}%`,transition:"width .5s"}} />
+                <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,#7c3aed,#a78bfa)",
+                  width:`${Math.min(100,(calc.taken/(calc.taken+calc.available||1))*100)}%`,transition:"width .5s"}} />
               </div>
               <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
                 <span style={{fontSize:10,color:"#94a3b8"}}>Usados: {calc.taken} días</span>
@@ -207,6 +170,7 @@ function App() {
               </div>
             </div>
 
+            {/* Stats row */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
               {[
                 {label:"Saldo inicial",val:cfg.baseBalance,color:"#0ea5e9",bg:"#f0f9ff",icon:"📦"},
@@ -221,6 +185,7 @@ function App() {
               ))}
             </div>
 
+            {/* Vacaciones registradas */}
             <div style={{background:"white",borderRadius:22,padding:18,boxShadow:"0 2px 12px rgba(0,0,0,.05)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                 <p style={{margin:0,fontSize:14,fontWeight:800,color:"#1e293b"}}>✈️ Viajes registrados</p>
@@ -238,57 +203,82 @@ function App() {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <div style={{width:36,height:36,borderRadius:12,background:"linear-gradient(135deg,#7c3aed,#a78bfa)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-                            {ICONS[i%5]}
+                            {["🌴","🏖️","🗻","🏙️","✈️"][i%5]}
                           </div>
                           <div>
                             <p style={{margin:0,fontSize:13,fontWeight:700,color:"#1e293b"}}>{v.description||"Sin descripción"}</p>
                             <p style={{margin:"2px 0 0",fontSize:11,color:"#94a3b8"}}>{fmtDate(v.date)} → {fmtDate(v.endDate)}</p>
                           </div>
                         </div>
-                        <div style={{background:"#fffbeb",color:"#d97706",borderRadius:10,padding:"4px 10px",fontSize:12,fontWeight:800,whiteSpace:"nowrap"}}>{v.days}d</div>
+                        <div style={{background:"#fffbeb",color:"#d97706",borderRadius:10,padding:"4px 10px",fontSize:12,fontWeight:800,whiteSpace:"nowrap"}}>
+                          {v.days}d
+                        </div>
                       </div>
                       <HolidayTags start={v.date} end={v.endDate} customs={customs} />
                     </div>
                   ))}
                   <div style={{textAlign:"right",paddingTop:4}}>
-                    <span style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>Total: <b style={{color:"#d97706"}}>{calc.taken} días</b></span>
+                    <span style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>Total consumido: <b style={{color:"#d97706"}}>{calc.taken} días</b></span>
                   </div>
                 </div>
               )}
             </div>
 
-            {calc.nextExpiring && (
-              <div style={{background:"linear-gradient(135deg,#fffbeb,#fef3c7)",border:"1.5px solid #fde68a",borderRadius:20,padding:16}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                  <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                    <div style={{fontSize:24}}>⏰</div>
-                    <div>
-                      <p style={{margin:0,fontSize:13,fontWeight:800,color:"#78350f"}}>Próximo vencimiento</p>
-                      <p style={{margin:"4px 0 0",fontSize:12,color:"#92400e",lineHeight:1.4}}>
-                        Tienes <b>{calc.nextExpiring.availableNow.toFixed(1)} días</b> que vencen en <b>{calc.nextExpiring.expirationText}</b>. ¡Planea tu próximo viaje!
-                      </p>
+            {/* Alerta vencimiento */}
+            {(()=>{
+              const b = calc.nextExpiring;
+              if(!b) return null;
+              const daysLeft = Math.ceil((b.expirationDate - new Date(targetDate+'T00:00:00')) / 86400000);
+              if(daysLeft > 90) return null;
+              const urgent = daysLeft <= 30;
+              const bg = urgent ? "linear-gradient(135deg,#fff1f2,#ffe4e6)" : "linear-gradient(135deg,#fffbeb,#fef3c7)";
+              const border = urgent ? "1.5px solid #fecdd3" : "1.5px solid #fde68a";
+              const titleColor = urgent ? "#9f1239" : "#78350f";
+              const textColor = urgent ? "#be185d" : "#92400e";
+              const btnBorder = urgent ? "#fecdd3" : "#fde68a";
+              const icon = urgent ? "🚨" : "⏰";
+              return (
+                <div style={{background:bg,border,borderRadius:20,padding:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                    <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                      <div style={{fontSize:24}}>{icon}</div>
+                      <div>
+                        <p style={{margin:0,fontSize:13,fontWeight:800,color:titleColor}}>
+                          {urgent ? "¡Vencimiento próximo!" : "Vencimiento en camino"}
+                        </p>
+                        <p style={{margin:"4px 0 0",fontSize:12,color:textColor,lineHeight:1.4}}>
+                          Tienes <b>{b.availableNow.toFixed(1)} días</b> que vencen en <b>{b.expirationText}</b> — quedan <b>{daysLeft} días</b>.
+                        </p>
+                      </div>
                     </div>
+                    <button onClick={()=>setShowBuckets(!showBuckets)}
+                      style={{background:"rgba(255,255,255,.6)",border:`1px solid ${btnBorder}`,borderRadius:10,padding:"5px 10px",fontSize:11,fontWeight:700,color:titleColor,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+                      {showBuckets?"▲":"▼"}
+                    </button>
                   </div>
-                  <button onClick={()=>setShowBuckets(!showBuckets)}
-                    style={{background:"rgba(255,255,255,.6)",border:"1px solid #fde68a",borderRadius:10,padding:"5px 10px",fontSize:11,fontWeight:700,color:"#92400e",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
-                    {showBuckets?"▲":"▼"}
-                  </button>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
+            {/* Bolsas */}
             {showBuckets && (
               <div style={{background:"white",borderRadius:20,padding:16,boxShadow:"0 2px 12px rgba(0,0,0,.05)"}}>
                 <p style={{margin:"0 0 12px",fontSize:11,fontWeight:800,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1}}>Desglose FIFO</p>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {calc.buckets.map(b => (
-                    <div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px",borderRadius:14,background:b.availableNow>0?"#faf9ff":"#f8fafc",border:`1.5px solid ${b.availableNow>0?"#ede9fe":"#e2e8f0"}`,opacity:b.availableNow>0?1:.55}}>
+                    <div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                      padding:"12px 14px",borderRadius:14,
+                      background:b.availableNow>0?"#faf9ff":"#f8fafc",
+                      border:`1.5px solid ${b.availableNow>0?"#ede9fe":"#e2e8f0"}`,
+                      opacity:b.availableNow>0?1:.55}}>
                       <div>
                         <p style={{margin:0,fontSize:12,fontWeight:700,color:"#334155"}}>{b.name}</p>
                         <p style={{margin:"3px 0 0",fontSize:10,color:"#94a3b8"}}>Vence: {b.expirationText}</p>
                       </div>
                       <div style={{textAlign:"right"}}>
-                        <p style={{margin:0,fontSize:15,fontWeight:800,color:b.availableNow>0?purple:"#cbd5e1"}}>{b.availableNow.toFixed(1)}<span style={{fontSize:9,fontWeight:500}}> disp.</span></p>
+                        <p style={{margin:0,fontSize:15,fontWeight:800,color:b.availableNow>0?purple:"#cbd5e1"}}>
+                          {b.availableNow.toFixed(1)}<span style={{fontSize:9,fontWeight:500}}> disp.</span>
+                        </p>
                         {b.isExpired&&b.lost>0&&<p style={{margin:"2px 0 0",fontSize:10,color:"#f43f5e",fontWeight:600}}>Perdiste {b.lost.toFixed(1)}</p>}
                       </div>
                     </div>
@@ -299,30 +289,34 @@ function App() {
           </div>
         )}
 
-        {/* HISTORIAL */}
+        {/* ── HISTORIAL ── */}
         {tab==="history" && (
-          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}} className="fade-up">
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
+            {/* Formulario */}
             <div style={{background:"white",borderRadius:22,padding:18,boxShadow:"0 2px 12px rgba(0,0,0,.05)"}}>
               <p style={{margin:"0 0 14px",fontSize:14,fontWeight:800,color:"#1e293b"}}>➕ Nuevo registro</p>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <Field label="Descripción">
-                  <input style={iSx} placeholder="Ej. Viaje a la playa" value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} />
+                  <input style={inputSx} placeholder="Ej. Viaje a la playa" value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} />
                 </Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <Field label="Fecha inicio"><input type="date" style={iSx} value={form.date} onChange={e=>handleDate('date',e.target.value)} /></Field>
-                  <Field label="Fecha fin"><input type="date" style={iSx} min={form.date} value={form.endDate} onChange={e=>handleDate('endDate',e.target.value)} /></Field>
+                  <Field label="Fecha inicio"><input type="date" style={inputSx} value={form.date} onChange={e=>handleDate('date',e.target.value)} /></Field>
+                  <Field label="Fecha fin"><input type="date" style={inputSx} min={form.date} value={form.endDate} onChange={e=>handleDate('endDate',e.target.value)} /></Field>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
                   <Field label="Días hábiles" style={{flex:1}}>
-                    <input type="number" style={iSx} min="0" step="0.5" value={form.days} onChange={e=>setForm(p=>({...p,days:e.target.value}))} />
+                    <input type="number" style={{...inputSx}} min="0" step="0.5" value={form.days} onChange={e=>setForm(p=>({...p,days:e.target.value}))} />
                   </Field>
-                  <button onClick={addVacation} style={{background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"white",border:"none",borderRadius:14,padding:"11px 22px",fontSize:14,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(124,58,237,.35)"}}>
+                  <button onClick={addVacation}
+                    style={{background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"white",border:"none",borderRadius:14,
+                      padding:"11px 22px",fontSize:14,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(124,58,237,.35)"}}>
                     Agregar
                   </button>
                 </div>
               </div>
             </div>
 
+            {/* Lista */}
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {vacations.length===0 ? (
                 <div style={{background:"white",borderRadius:20,padding:32,textAlign:"center",color:"#cbd5e1"}}>
@@ -334,12 +328,12 @@ function App() {
                   <div key={v.id} style={{background:"#faf9ff",borderRadius:20,padding:16,border:"2px solid #a78bfa"}}>
                     <p style={{margin:"0 0 12px",fontSize:12,fontWeight:700,color:purple}}>✏️ Editando</p>
                     <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                      <Field label="Descripción"><input style={iSx} value={editForm.description} onChange={e=>setEditForm(p=>({...p,description:e.target.value}))} /></Field>
+                      <Field label="Descripción"><input style={inputSx} value={editForm.description} onChange={e=>setEditForm(p=>({...p,description:e.target.value}))} /></Field>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                        <Field label="Inicio"><input type="date" style={iSx} value={editForm.date} onChange={e=>handleEditDate('date',e.target.value)} /></Field>
-                        <Field label="Fin"><input type="date" style={iSx} min={editForm.date} value={editForm.endDate} onChange={e=>handleEditDate('endDate',e.target.value)} /></Field>
+                        <Field label="Inicio"><input type="date" style={inputSx} value={editForm.date} onChange={e=>handleEditDate('date',e.target.value)} /></Field>
+                        <Field label="Fin"><input type="date" style={inputSx} min={editForm.date} value={editForm.endDate} onChange={e=>handleEditDate('endDate',e.target.value)} /></Field>
                       </div>
-                      <Field label="Días"><input type="number" style={iSx} min="0" step="0.5" value={editForm.days} onChange={e=>setEditForm(p=>({...p,days:e.target.value}))} /></Field>
+                      <Field label="Días"><input type="number" style={inputSx} min="0" step="0.5" value={editForm.days} onChange={e=>setEditForm(p=>({...p,days:e.target.value}))} /></Field>
                       <div style={{display:"flex",gap:8}}>
                         <button onClick={saveEdit} style={{flex:1,background:"#10b981",color:"white",border:"none",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Guardar</button>
                         <button onClick={()=>setEditId(null)} style={{flex:1,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✕ Cancelar</button>
@@ -352,7 +346,7 @@ function App() {
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                       <div style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0}}>
                         <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#7c3aed22,#a78bfa33)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-                          {ICONS[i%5]}
+                          {["🌴","🏖️","🗻","🏙️","✈️"][i%5]}
                         </div>
                         <div style={{minWidth:0}}>
                           <p style={{margin:0,fontSize:13,fontWeight:700,color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.description||"Sin descripción"}</p>
@@ -373,20 +367,20 @@ function App() {
           </div>
         )}
 
-        {/* CONFIGURACIÓN */}
+        {/* ── CONFIGURACIÓN ── */}
         {tab==="settings" && (
-          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}} className="fade-up">
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
             <div style={{background:"white",borderRadius:22,padding:18,boxShadow:"0 2px 12px rgba(0,0,0,.05)"}}>
               <p style={{margin:"0 0 16px",fontSize:14,fontWeight:800,color:"#1e293b"}}>⚙️ Parámetros base</p>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <Field label="Fecha de corte"><input type="date" style={iSx} value={cfg.baseDate} onChange={e=>setCfg(p=>({...p,baseDate:e.target.value}))} /></Field>
-                  <Field label="Días en el corte"><input type="number" style={iSx} step="0.5" value={cfg.baseBalance} onChange={e=>setCfg(p=>({...p,baseBalance:Number(e.target.value)||0}))} /></Field>
+                  <Field label="Fecha de corte"><input type="date" style={inputSx} value={cfg.baseDate} onChange={e=>setCfg(p=>({...p,baseDate:e.target.value}))} /></Field>
+                  <Field label="Días en el corte"><input type="number" style={inputSx} step="0.5" value={cfg.baseBalance} onChange={e=>setCfg(p=>({...p,baseBalance:Number(e.target.value)||0}))} /></Field>
                 </div>
-                <Field label="Próximo aniversario"><input type="date" style={iSx} value={cfg.anniversaryDate} onChange={e=>setCfg(p=>({...p,anniversaryDate:e.target.value}))} /></Field>
+                <Field label="Próximo aniversario"><input type="date" style={inputSx} value={cfg.anniversaryDate} onChange={e=>setCfg(p=>({...p,anniversaryDate:e.target.value}))} /></Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <Field label="Días/año (antes aniv.)"><input type="number" style={iSx} value={cfg.oldRate} onChange={e=>setCfg(p=>({...p,oldRate:Number(e.target.value)||0}))} /></Field>
-                  <Field label="Días/año (después aniv.)"><input type="number" style={iSx} value={cfg.newRate} onChange={e=>setCfg(p=>({...p,newRate:Number(e.target.value)||0}))} /></Field>
+                  <Field label="Días/año (antes aniv.)"><input type="number" style={inputSx} value={cfg.oldRate} onChange={e=>setCfg(p=>({...p,oldRate:Number(e.target.value)||0}))} /></Field>
+                  <Field label="Días/año (después aniv.)"><input type="number" style={inputSx} value={cfg.newRate} onChange={e=>setCfg(p=>({...p,newRate:Number(e.target.value)||0}))} /></Field>
                 </div>
               </div>
             </div>
@@ -396,12 +390,15 @@ function App() {
               <p style={{margin:"0 0 14px",fontSize:12,color:"#94a3b8"}}>No se descuentan de tus vacaciones</p>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <Field label="Inicio"><input type="date" style={iSx} value={cForm.startDate} onChange={e=>setCForm(p=>({...p,startDate:e.target.value,endDate:p.endDate||e.target.value}))} /></Field>
-                  <Field label="Fin"><input type="date" style={iSx} min={cForm.startDate} value={cForm.endDate} onChange={e=>setCForm(p=>({...p,endDate:e.target.value}))} /></Field>
+                  <Field label="Inicio"><input type="date" style={inputSx} value={cForm.startDate} onChange={e=>setCForm(p=>({...p,startDate:e.target.value,endDate:p.endDate||e.target.value}))} /></Field>
+                  <Field label="Fin"><input type="date" style={inputSx} min={cForm.startDate} value={cForm.endDate} onChange={e=>setCForm(p=>({...p,endDate:e.target.value}))} /></Field>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <input placeholder="Descripción (ej. Descanso fin de año)" value={cForm.description} onChange={e=>setCForm(p=>({...p,description:e.target.value}))} style={{...iSx,flex:1}} />
-                  <button onClick={addCustom} style={{background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"white",border:"none",borderRadius:14,padding:"11px 18px",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 12px rgba(124,58,237,.3)"}}>+</button>
+                  <input placeholder="Descripción (ej. Descanso fin de año)" value={cForm.description}
+                    onChange={e=>setCForm(p=>({...p,description:e.target.value}))}
+                    style={{...inputSx,flex:1}} />
+                  <button onClick={addCustom}
+                    style={{background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"white",border:"none",borderRadius:14,padding:"11px 18px",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 12px rgba(124,58,237,.3)"}}>+</button>
                 </div>
               </div>
               {customs.length>0 && (
@@ -417,16 +414,20 @@ function App() {
             </div>
 
             <div style={{background:"linear-gradient(135deg,#f0fdf4,#dcfce7)",borderRadius:18,padding:14,border:"1.5px solid #bbf7d0",fontSize:12,color:"#15803d",lineHeight:1.6}}>
-              💡 <b>Tus datos se guardan automáticamente</b> en este dispositivo. Nadie más puede ver tu información.
+              💡 <b>Nota:</b> Los datos se guardan en esta sesión. Para persistencia permanente, súbelo a GitHub Pages igual que la app de Tepoz.
             </div>
           </div>
         )}
       </div>
 
-      {/* Tab Bar */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(255,255,255,.92)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderTop:"1px solid rgba(124,58,237,.1)",display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:100}}>
+      {/* ── TAB BAR ── */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(255,255,255,.92)",
+        backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",
+        borderTop:"1px solid rgba(124,58,237,.1)",
+        display:"flex",justifyContent:"space-around",padding:"10px 0 16px",zIndex:100}}>
         {tabs.map(t => (
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",padding:"0 24px",position:"relative"}}>
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",padding:"0 24px",position:"relative"}}>
             {tab===t.id && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",width:32,height:3,borderRadius:99,background:purple}} />}
             <span style={{fontSize:22,filter:tab===t.id?"none":"grayscale(1)",opacity:tab===t.id?1:.5,transition:"all .2s"}}>{t.icon}</span>
             <span style={{fontSize:10,fontWeight:tab===t.id?800:500,color:tab===t.id?purple:"#94a3b8",transition:"all .2s"}}>{t.label}</span>
@@ -436,17 +437,3 @@ function App() {
     </div>
   );
 }
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
-
-<!-- Service Worker para PWA offline -->
-<script>
-  if('serviceWorker' in navigator){
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    });
-  }
-</script>
-</body>
-</html>
